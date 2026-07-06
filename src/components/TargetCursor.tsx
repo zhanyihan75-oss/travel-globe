@@ -1,17 +1,26 @@
-import { useEffect, useRef } from 'react';
+﻿import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 
+interface TargetCursorProps {
+  spinDuration?: number;
+  hideDefaultCursor?: boolean;
+  hoverDuration?: number;
+  cursorColor?: string;
+  cursorColorOnTarget?: string;
+  isHoveringCountry?: boolean;
+}
+
 export default function TargetCursor({
-  spinDuration = 2,
+  spinDuration: _spinDuration,
   hideDefaultCursor = true,
   hoverDuration = 0.2,
   cursorColor = '#6aeaff',
   cursorColorOnTarget,
   isHoveringCountry = false,
-}) {
-  const wrapperRef = useRef(null);
-  const dotRef = useRef(null);
-  const cornersRef = useRef([]);
+}: TargetCursorProps) {
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const dotRef = useRef<HTMLDivElement | null>(null);
+  const cornersRef = useRef<(HTMLDivElement | null)[]>([]);
   const animatingRef = useRef(false);
   const prevHoverRef = useRef(false);
   const isMobileRef = useRef(false);
@@ -30,7 +39,7 @@ export default function TargetCursor({
     if (isMobileRef.current || !wrapperRef.current) return;
     const cursor = wrapperRef.current;
     gsap.set(cursor, { xPercent: -50, yPercent: -50 });
-    const onMove = (e) => {
+    const onMove = (e: MouseEvent) => {
       gsap.to(cursor, { x: e.clientX, y: e.clientY, duration: 0.15, ease: 'power2.out', overwrite: 'auto' });
     };
     window.addEventListener('mousemove', onMove);
@@ -43,11 +52,14 @@ export default function TargetCursor({
     if (prevHoverRef.current === isHoveringCountry) return;
     prevHoverRef.current = isHoveringCountry;
     animatingRef.current = true;
-    const tl = gsap.timeline({ onComplete: () => { animatingRef.current = false; } });
+    const tl = gsap.timeline({
+      onComplete: () => { animatingRef.current = false; },
+    });
     const expandDirs = [['-200%','-200%'],['100%','-200%'],['100%','100%'],['-200%','100%']];
     const restDirs = [['-150%','-150%'],['50%','-150%'],['50%','50%'],['-150%','50%']];
     const dirs = isHoveringCountry ? expandDirs : restDirs;
     cornersRef.current.forEach((corner, i) => {
+      if (!corner) return;
       const tx = dirs[i][0];
       const ty = dirs[i][1];
       tl.to(corner, { css: { transform: 'translate(' + tx + ', ' + ty + ')' }, duration: hoverDuration, ease: 'power2.out' }, 0);
@@ -59,8 +71,12 @@ export default function TargetCursor({
     if (dotRef.current) {
       tl.to(dotRef.current, { backgroundColor: isHoveringCountry ? tc : '#fff', borderColor: tc, duration: hoverDuration }, 0);
     }
-    cornersRef.current.forEach((c) => { tl.to(c, { borderColor: tc, duration: hoverDuration }, 0); });
-    return () => tl.kill();
+    cornersRef.current.forEach((c) => {
+      if (c) tl.to(c, { borderColor: tc, duration: hoverDuration }, 0);
+    });
+    // Return undefined destructor to satisfy EffectCallback
+    return () => { tl.kill(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHoveringCountry, hoverDuration, cursorColor, cursorColorOnTarget]);
 
   if (isMobileRef.current) return null;
